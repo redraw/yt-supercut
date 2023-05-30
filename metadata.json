@@ -1,0 +1,13 @@
+{
+    "databases": {
+        "youtube": {
+            "tables": {
+                "subtitles_with_videos": {
+                    "fts_table": "subtitles_fts",
+                    "fts_pk": "subtitle_id",
+                    "searchmode": "raw"
+                }
+            }
+        }
+    }
+}
