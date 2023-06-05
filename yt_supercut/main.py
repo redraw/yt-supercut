@@ -118,8 +118,11 @@ def remove_channel(uploader_id: str = typer.Argument(help="Channel user handle (
     db.delete_channel(uploader_id)
 
 
-@cli.command()
-def server(port: str = 8001):
+@cli.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    help="Run datasette, supports all datasette options",
+)
+def server(ctx: typer.Context):
     try:
         import datasette
     except ImportError:
@@ -129,10 +132,9 @@ def server(port: str = 8001):
     args = [
         "datasette",
         db.DB_PATH,
-        "--port",
-        port,
         "--metadata",
         str(Path().parent / "metadata.json"),
+        *ctx.args
     ] 
 
     subprocess.run(args)
