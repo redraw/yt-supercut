@@ -11,6 +11,7 @@ from . import db
 def get_video_ids(url, verbose=True):
     opts = {
         "skipdownload": True,
+        "no_warnings": True,
         "noprogress": True,
         "dumpjson": True,
         "quiet": not verbose,
@@ -39,6 +40,7 @@ def download_and_process_subtitles(video_id, lang, lock=None, verbose=False):
     with tempfile.TemporaryDirectory() as tmpdir:
         opts = {
             "skip_download": True,
+            "no_warnings": True,
             "writeautomaticsub": True,
             "writeinfojson": True,
             "convertsubtitles": True,
