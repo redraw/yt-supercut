@@ -1,9 +1,11 @@
 import json
 from pathlib import Path
 import subprocess
-import typer
+from typing import List, Optional
 import threading
 import concurrent.futures
+
+import typer
 from tqdm import tqdm
 from tabulate import tabulate
 from . import db, utils
@@ -20,10 +22,11 @@ def index(
     url: str,
     lang: str = "es",
     verbose: bool = False,
-    max_threads: int = None,
+    max_threads: Optional[int] = None,
+    cookies_from: Optional[str] = None,
 ):
     print(f"Fetching video urls from {url}...")
-    video_ids = list(utils.get_video_ids(url, verbose=verbose))
+    video_ids = list(utils.get_video_ids(url, cookies_from=cookies_from, lang=lang, verbose=verbose))
     new_ids = list(db.filter_existing_video_ids(video_ids, lang))
 
     # download and index subs in parallel
@@ -122,7 +125,7 @@ def remove_channel(uploader_id: str = typer.Argument(help="Channel user handle (
     context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
     help="Run datasette, supports all datasette options",
 )
-def server(ctx: typer.Context):
+def server(ctx: typer.Context, port: str = "8001"):
     try:
         import datasette
     except ImportError:
@@ -134,9 +137,12 @@ def server(ctx: typer.Context):
         db.DB_PATH,
         "--metadata",
         str(Path().parent / "metadata.json"),
+        "--port",
+        port,
         *ctx.args
     ] 
 
+    print(f"When server is ready, open http://localhost:{port}/youtube/subtitles_with_videos")
     subprocess.run(args)
 
 

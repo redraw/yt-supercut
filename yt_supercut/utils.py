@@ -1,14 +1,25 @@
 import os
+import re
 import math
 import json
 import tempfile
+from pathlib import Path
+
 import webvtt
+import appdirs
 from yt_dlp import YoutubeDL
-from yt_dlp.utils import download_range_func
+from yt_dlp.utils import download_range_func, ExistingVideoReached
 from . import db
 
 
-def get_video_ids(url, verbose=True):
+CONFIG_DIR = appdirs.user_config_dir("yt_supercut")
+Path(CONFIG_DIR).mkdir(parents=True, exist_ok=True)
+
+
+def get_video_ids(url, cookies_from=None, lang=None, verbose=True):
+    stripped_url = re.sub(r'[^\w]', '_', url)
+    archive_path = Path(CONFIG_DIR) / f"{stripped_url}.{lang}.txt"
+
     opts = {
         "skipdownload": True,
         "no_warnings": True,
@@ -19,24 +30,31 @@ def get_video_ids(url, verbose=True):
         "extractor_args": {
             "youtube": {"skip": ["dash", "hls"]},
             "youtubetab": {"approximate_date": ["timestamp"]},
-        }
+        },
+        "break_on_existing": True,
+        "break_per_url": True,
+        "force_write_download_archive": True,
+        "download_archive": str(archive_path),
     }
 
+    if cookies_from:
+        opts.update({
+            "cookiesfrombrowser": cookies_from.split(","),
+        })
+
     with YoutubeDL(opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-
-    if "entries" in info:
-        for entry in info["entries"]:
-            if "entries" in entry:
-                for subentry in entry["entries"]:
-                    yield subentry["id"]
-            else:
-                yield entry["id"]
-    else:
-        yield info["id"]
+        try:
+            ydl.extract_info(url, download=False)
+        except ExistingVideoReached:
+            pass
+    
+    with archive_path.open() as f:
+        for line in f.readlines():
+            _, video_id = line.strip().split(" ")
+            yield video_id
 
 
-def download_and_process_subtitles(video_id, lang, lock=None, verbose=False):
+def download_and_process_subtitles(video_id, lang, cookies_from=None, lock=None, verbose=False):
     with tempfile.TemporaryDirectory() as tmpdir:
         opts = {
             "skip_download": True,
@@ -50,6 +68,11 @@ def download_and_process_subtitles(video_id, lang, lock=None, verbose=False):
             "quiet": not verbose,
             "outtmpl": os.path.join(tmpdir, "%(id)s.%(ext)s"),
         }
+
+        if cookies_from:
+            opts.update({
+                "cookiesfrombrowser": cookies_from.split(","),
+            })
 
         with YoutubeDL(opts) as yt:
             # download subtitles

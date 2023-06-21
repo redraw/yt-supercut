@@ -188,12 +188,18 @@ def get_videos():
         yield video
 
 
+def get_video_languages():
+    db = get_db()
+    for video_language in db["video_languages"].rows:
+        yield video_language
+
+
 def filter_existing_video_ids(video_ids, lang):
     db = get_db()
     db.execute("CREATE TEMPORARY TABLE IF NOT EXISTS tmp (video_id TEXT NOT NULL PRIMARY KEY)")
     db["tmp"].insert_all([{"video_id": video_id} for video_id in video_ids])
     for row in db["tmp"].rows_where(
-        "video_id not in (select video_id from video_languages where lang = :lang or available = 0)",
+        "video_id not in (select video_id from video_languages where lang = :lang)",
         {"lang": lang},
     ):
         yield row["video_id"]
