@@ -24,9 +24,10 @@ def index(
     verbose: bool = False,
     max_threads: Optional[int] = None,
     cookies_from: Optional[str] = None,
+    proxy: Optional[str] = None,
 ):
     print(f"Fetching video urls from {url}...")
-    video_ids = list(utils.get_video_ids(url, cookies_from=cookies_from, lang=lang, verbose=verbose))
+    video_ids = list(utils.get_video_ids(url, cookies_from=cookies_from, lang=lang, verbose=verbose, proxy=proxy))
     new_ids = list(db.filter_existing_video_ids(video_ids, lang))
 
     # download and index subs in parallel
@@ -38,6 +39,7 @@ def index(
                 lang,
                 lock=lock,
                 verbose=verbose,
+                proxy=proxy,
             ) 
             for video_id in new_ids
         )
@@ -65,6 +67,7 @@ def search(
     format: str = "",
     download_parts: bool = False,
     spacing_secs: int = 5,
+    proxy: Optional[str] = None,
     merge: bool = False,
 ):
     results = []
@@ -82,6 +85,7 @@ def search(
                 row,
                 folder=f"output-{text.replace(' ', '-').lower()}",
                 spacing_secs=spacing_secs,
+                proxy=proxy,
             )
         return
 

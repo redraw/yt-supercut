@@ -16,7 +16,7 @@ CONFIG_DIR = appdirs.user_config_dir("yt_supercut")
 Path(CONFIG_DIR).mkdir(parents=True, exist_ok=True)
 
 
-def get_video_ids(url, cookies_from=None, lang=None, verbose=True):
+def get_video_ids(url, cookies_from=None, lang=None, verbose=True, proxy=None):
     stripped_url = re.sub(r'[^\w]', '_', url)
     archive_path = Path(CONFIG_DIR) / f"{stripped_url}.{lang}.txt"
 
@@ -42,6 +42,11 @@ def get_video_ids(url, cookies_from=None, lang=None, verbose=True):
             "cookiesfrombrowser": cookies_from.split(","),
         })
 
+    if proxy:
+        opts.update({
+            "proxy": proxy,
+        })
+
     with YoutubeDL(opts) as ydl:
         try:
             ydl.extract_info(url, download=False)
@@ -54,7 +59,7 @@ def get_video_ids(url, cookies_from=None, lang=None, verbose=True):
             yield video_id
 
 
-def download_and_process_subtitles(video_id, lang, cookies_from=None, lock=None, verbose=False):
+def download_and_process_subtitles(video_id, lang, cookies_from=None, lock=None, verbose=False, proxy=None):
     with tempfile.TemporaryDirectory() as tmpdir:
         opts = {
             "skip_download": True,
@@ -72,6 +77,11 @@ def download_and_process_subtitles(video_id, lang, cookies_from=None, lock=None,
         if cookies_from:
             opts.update({
                 "cookiesfrombrowser": cookies_from.split(","),
+            })
+
+        if proxy:
+            opts.update({
+                "proxy": proxy,
             })
 
         with YoutubeDL(opts) as yt:
@@ -119,7 +129,7 @@ def process_subtitles(video_id, lang, folder):
     db.add_channel_info(info)
 
 
-def download_part(info, folder="output", spacing_secs=5):
+def download_part(info, folder="output", spacing_secs=5, proxy=None):
     print(f"Dowloading {info}")
 
     if not os.path.exists(folder):
@@ -134,6 +144,11 @@ def download_part(info, folder="output", spacing_secs=5):
         "download_archive": os.path.join(folder, "archive.txt"),
         "outtmpl": os.path.join(folder, "%(title)s.%(id)s.%(start_time)s-%(end_time)s.%(ext)s"),
     }
+
+    if proxy:
+        opts.update({
+            "proxy": proxy,
+        })
 
     with YoutubeDL(opts) as yt:
         yt.download([info["link"]])
