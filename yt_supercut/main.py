@@ -27,7 +27,11 @@ def index(
     proxy: Optional[str] = None,
 ):
     print(f"Fetching video urls from {url}...")
-    video_ids = list(utils.get_video_ids(url, cookies_from=cookies_from, lang=lang, verbose=verbose, proxy=proxy))
+    video_ids = list(
+        utils.get_video_ids(
+            url, cookies_from=cookies_from, lang=lang, verbose=verbose, proxy=proxy
+        )
+    )
     new_ids = list(db.filter_existing_video_ids(video_ids, lang))
 
     # download and index subs in parallel
@@ -40,12 +44,12 @@ def index(
                 lock=lock,
                 verbose=verbose,
                 proxy=proxy,
-            ) 
+            )
             for video_id in new_ids
         )
         try:
             for future in tqdm(
-                concurrent.futures.as_completed(tasks), 
+                concurrent.futures.as_completed(tasks),
                 desc="Downloading subtitles",
                 total=len(new_ids),
             ):
@@ -103,7 +107,7 @@ def list_channels(format: str = ""):
         print(json.dumps(channels, indent=2))
     else:
         print(tabulate(channels, headers="keys", tablefmt="simple"))
-        
+
 
 @cli.command()
 def stats(format: str = ""):
@@ -121,7 +125,9 @@ def stats(format: str = ""):
 
 
 @cli.command()
-def remove_channel(uploader_id: str = typer.Argument(help="Channel user handle (ie. @user)")):
+def remove_channel(
+    uploader_id: str = typer.Argument(help="Channel user handle (ie. @user)"),
+):
     db.delete_channel(uploader_id)
 
 
@@ -143,11 +149,25 @@ def server(ctx: typer.Context, port: str = "8001"):
         str(Path().parent / "metadata.json"),
         "--port",
         port,
-        *ctx.args
-    ] 
+        *ctx.args,
+    ]
 
-    print(f"When server is ready, open http://localhost:{port}/youtube/subtitles_with_videos")
+    print(
+        f"When server is ready, open http://localhost:{port}/youtube/subtitles_with_videos"
+    )
     subprocess.run(args)
+
+
+@cli.command()
+def build_transcripts(
+    output: str = ".",
+):
+    for video in db.get_video_languages():
+        video_id = video["video_id"]
+        lang = video["lang"]
+
+        print(f"Building transcript for {video_id} in {lang}...")
+        utils.build_transcript(video_id, lang=lang, path=output)
 
 
 if __name__ == "__main__":
